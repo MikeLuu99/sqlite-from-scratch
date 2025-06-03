@@ -33,7 +33,6 @@ typedef struct {
   uint32_t Id;
   char username[COLUMN_USERNAME_SIZE];
   char email[COLUMN_EMAIL_SIZE];
-
 } Row;
 
 typedef struct {
@@ -85,9 +84,9 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
   if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-    int arg_assigned = scanf(input_buffer->buffer, "insert %u %s %s", &statement->row_to_insert.Id, statement->row_to_insert.username, statement->row_to_insert.email);
+    int arg_assigned = sscanf(input_buffer->buffer, "insert %d %s %s", &(statement->row_to_insert.Id), statement->row_to_insert.username, statement->row_to_insert.email);
 
-    if (arg_assigned != 3) {
+    if (arg_assigned < 3) {
       return PREPARE_SYNTAX_ERROR;
     }
     statement->type = STATEMENT_INSERT;
