@@ -1,7 +1,11 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#define COLUMN_USERNAME_SIZE 32
+#define COLUMN_EMAIL_SIZE 255
 
 typedef struct {
   char* buffer;
@@ -16,7 +20,8 @@ typedef enum {
 
 typedef enum {
   PREPARE_SUCCESS,
-  PREPARE_UNRECOGNIZED
+  PREPARE_UNRECOGNIZED,
+  PREPARE_SYNTAX_ERROR
 } PrepareResult;
 
 typedef enum {
@@ -25,7 +30,15 @@ typedef enum {
 } StatementType;
 
 typedef struct {
+  uint32_t Id;
+  char username[COLUMN_USERNAME_SIZE];
+  char email[COLUMN_EMAIL_SIZE];
+
+} Row;
+
+typedef struct {
   StatementType type;
+  Row row_to_insert;
 } Statement;
 
 void close_input_buffer(InputBuffer *input_buffer) {
@@ -56,6 +69,7 @@ void read_input(InputBuffer* input_buffer) {
     exit(EXIT_FAILURE);
   }
 
+  // Asign the size of the buffer and the null terminator
   input_buffer->buffer_length = bytes_read - 1;
   input_buffer->buffer[bytes_read - 1] = 0;
 }
@@ -71,6 +85,11 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
   if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+    int arg_assigned = scanf(input_buffer->buffer, "insert %u %s %s", &statement->row_to_insert.Id, statement->row_to_insert.username, statement->row_to_insert.email);
+
+    if (arg_assigned != 3) {
+      return PREPARE_SYNTAX_ERROR;
+    }
     statement->type = STATEMENT_INSERT;
     return PREPARE_SUCCESS;
   }
@@ -98,13 +117,6 @@ int main (int argc, char* argv[]) {
     print_prompt();
     read_input(input_buffer);
 
-    // if (strcmp(input_buffer->buffer, ".exit") == 0) {
-    //   close_input_buffer(input_buffer);
-    //   exit(EXIT_SUCCESS);
-    // } else {
-    //   printf("Unrecognized command: '%s'\n", input_buffer->buffer);
-    // }
-
     if (input_buffer->buffer[0] == '.') {
       switch (do_meta_command(input_buffer)) {
         case (META_COMMAND_SUCCESS) :
@@ -119,6 +131,9 @@ int main (int argc, char* argv[]) {
     switch (prepare_statement(input_buffer, &statement)) {
       case (PREPARE_SUCCESS) :
         break;
+      case (PREPARE_SYNTAX_ERROR) :
+        printf("Syntax error. Could not parse statement: '%s'\n", input_buffer->buffer);
+        continue;
       case (PREPARE_UNRECOGNIZED) :
         printf("Unrecognized keyword at start of: '%s'\n", input_buffer->buffer);
         continue;
